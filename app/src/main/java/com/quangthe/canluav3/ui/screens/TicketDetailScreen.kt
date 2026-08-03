@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +53,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.util.Locale
@@ -66,7 +66,6 @@ fun TicketDetailScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val view = LocalView.current
     val ticket by viewModel.selectedTicket.collectAsState()
     val sheets by viewModel.sheets.collectAsState()
     val appSettings by viewModel.appSettings.collectAsState()
@@ -90,14 +89,12 @@ fun TicketDetailScreen(
     }
 
     val allCellsBySheetId by remember(sheets) {
-        viewModel.sheets.flatMapLatest { sheetList ->
-            if (sheetList.isEmpty()) flowOf(emptyMap<Int, List<RiceCell>>())
-            else {
-                val flows = sheetList.map { sheet ->
-                    viewModel.getCellsForSheet(sheet.id).map { cells -> sheet.id to cells }
-                }
-                combine(flows) { array -> array.toMap() }
+        if (sheets.isEmpty()) flowOf(emptyMap<Int, List<RiceCell>>())
+        else {
+            val flows = sheets.map { sheet ->
+                viewModel.getCellsForSheet(sheet.id).map { cells -> sheet.id to cells }
             }
+            combine(flows) { array -> array.toMap() }
         }
     }.collectAsState(initial = emptyMap())
 
@@ -216,6 +213,8 @@ fun TicketDetailScreen(
             DashboardContent(
                 totalWeight = totalWeight,
                 numBags = numBags,
+                totalTare = totalTare,
+                remainingWeight = remainingWeight,
                 totalPrice = totalPrice,
                 ticket = ticket!!,
                 isExpanded = isDashboardExpanded,
@@ -301,20 +300,37 @@ fun TicketDetailScreen(
             SendButton(
                 onClick = {
                     coroutineScope.launch {
-                        val originallyExpanded = isDashboardExpanded
-                        if (!originallyExpanded) {
-                            isDashboardExpanded = true
+                        try {
+                            Toast.makeText(context, "Đang tạo ảnh chất lượng cao...", Toast.LENGTH_SHORT).show()
+                            
+                            val ticketData = ticket ?: return@launch
+                            val weightData = totalWeight
+                            val priceData = totalPrice
+                            
+                            viewModel.getAllCellsForTicket(ticketData.id).take(1).collect { cells ->
+                                val bitmap = ScreenshotUtils.generateBitmapFromComposable(context) {
+                                    LongTicketShareView(
+                                        ticket = ticketData,
+                                        allCells = cells,
+                                        totalWeight = weightData,
+                                        totalPrice = priceData
+                                    )
+                                }
+                                
+                                val fileName = "Phieu_Can_Lua_${ticketData.ticketName.replace(" ", "_")}.png"
+                                ScreenshotUtils.shareBitmap(context, bitmap, fileName)
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_LONG).show()
                         }
-                        scrollState.animateScrollTo(0)
-                        kotlinx.coroutines.delay(500)
-                        Toast.makeText(context, "Đang chuẩn bị kết quả...", Toast.LENGTH_SHORT).show()
-                        ScreenshotUtils.captureAndShare(context, view)
                     }
                 }
             )
-
             Spacer(modifier = Modifier.height(40.dp))
+
         }
+
 
         if (showEditNameDialog && ticket != null) {
             var tempName by remember { mutableStateOf(ticket!!.ticketName) }
@@ -347,6 +363,8 @@ fun TicketDetailScreen(
 fun DashboardContent(
     totalWeight: Double,
     numBags: Int,
+    totalTare: Double,
+    remainingWeight: Double,
     totalPrice: Double,
     ticket: RiceTicket,
     isExpanded: Boolean,
@@ -386,7 +404,7 @@ fun DashboardContent(
 
             AnimatedVisibility(visible = isExpanded) {
                 Column(modifier = Modifier.padding(top = 4.dp)) {
-                    DashboardItemRow("Tổng khối lượng", String.format(Locale.US, "%.1f", totalWeight) + " kg", isBold = true)
+                    DashboardItemRow("Tổng khối lượng (Gross)", String.format(Locale.US, "%.1f", totalWeight) + " kg", isBold = true)
                     DashboardItemRow("Tổng số bao", "$numBags bao")
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color.White.copy(alpha = 0.5f))
@@ -398,7 +416,7 @@ fun DashboardContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(44.dp)
-                                .background(Color.White, RoundedCornerShape(8.dp))
+                                .background(DetailPrimaryGreen, RoundedCornerShape(8.dp))
                                 .border(1.dp, DetailPrimaryGreen.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp)
                         ) {
@@ -406,10 +424,10 @@ fun DashboardContent(
                                 modifier = Modifier.fillMaxSize(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(String.format(Locale.US, "%.1f", actualTare) + " Kg", fontWeight = FontWeight.Bold, color = DetailPrimaryGreen, modifier = Modifier.weight(1f))
-                                Text("${ticket.tarePerBag} bao trừ 1Kg", color = Color.Black, fontWeight = FontWeight.Bold)
+                                Text(String.format(Locale.US, "%.1f", totalTare) + " Kg", fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
+                                Text("${ticket.tarePerBag} bao trừ 1Kg", color = Color.White, fontWeight = FontWeight.Bold)
                                 IconButton(onClick = { showTareDialog = true }, modifier = Modifier.size(32.dp).padding(start = 4.dp)) {
-                                    Icon(Icons.Default.Settings, contentDescription = null, tint = DetailPrimaryGreen, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
@@ -424,7 +442,7 @@ fun DashboardContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(44.dp)
-                                .background(Color.White, RoundedCornerShape(8.dp))
+                                .background(DetailPrimaryGreen, RoundedCornerShape(8.dp))
                                 .border(1.dp, DetailPrimaryGreen.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp)
                         ) {
@@ -432,14 +450,17 @@ fun DashboardContent(
                                 modifier = Modifier.fillMaxSize(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(String.format(Locale.US, "%.1f", actualImpurity) + " Kg", fontWeight = FontWeight.Bold, color = DetailPrimaryGreen, modifier = Modifier.weight(1f))
-                                Text("Trừ ${ticket.impurityPerTon} Kg mỗi tấn", color = Color.Black, fontWeight = FontWeight.Bold)
+                                val actualImpurity = (totalWeight / 1000.0) * ticket.impurityPerTon
+                                Text(String.format(Locale.US, "%.1f", actualImpurity) + " Kg", fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
+                                Text("Trừ ${ticket.impurityPerTon} Kg mỗi tấn", color = Color.White, fontWeight = FontWeight.Bold)
                                 IconButton(onClick = { showImpurityDialog = true }, modifier = Modifier.size(32.dp).padding(start = 4.dp)) {
-                                    Icon(Icons.Default.Settings, contentDescription = null, tint = DetailPrimaryGreen, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
                     }
+
+                    DashboardItemRow("Khối lượng còn lại (Net)", String.format(Locale.US, "%.1f", remainingWeight) + " kg", isBold = true)
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color.White.copy(alpha = 0.5f))
 
@@ -454,7 +475,8 @@ fun DashboardContent(
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color.White.copy(alpha = 0.5f))
 
-                    DashboardItemRow("Thành tiền", "${DecimalFormat("#,###").format(totalPrice)} đ", isBold = true)
+                    val priceCalculation = "${String.format(Locale.US, "%.1f", remainingWeight)} kg x ${DecimalFormat("#,###").format(ticket.unitPrice)} ="
+                    DashboardItemRow("Thành tiền", "$priceCalculation ${DecimalFormat("#,###").format(totalPrice)} đ", isBold = true)
 
                     DashboardEditableRow(
                         label = "TIỀN CỌC, TIỀN ỨNG",
@@ -587,6 +609,9 @@ fun DashboardEditableRow(
         mutableStateOf(TextFieldValue(text = value, selection = TextRange(value.length)))
     }
 
+    val backgroundColor = if (isEditMode) Color.White else DetailPrimaryGreen
+    val contentColor = if (isEditMode) DetailPrimaryGreen else Color.White
+
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
     ) {
@@ -598,7 +623,7 @@ fun DashboardEditableRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(44.dp)
-                .background(Color.White, RoundedCornerShape(8.dp))
+                .background(backgroundColor, RoundedCornerShape(8.dp))
                 .border(1.dp, DetailPrimaryGreen.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                 .padding(horizontal = 8.dp)
         ) {
@@ -616,7 +641,7 @@ fun DashboardEditableRow(
                         modifier = Modifier
                             .weight(1f)
                             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
-                        textStyle = TextStyle(textAlign = TextAlign.Start, fontWeight = FontWeight.Bold, color = DetailPrimaryGreen),
+                        textStyle = TextStyle(textAlign = TextAlign.Start, fontWeight = FontWeight.Bold, color = contentColor),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         cursorBrush = SolidColor(DetailPrimaryGreen)
@@ -626,18 +651,18 @@ fun DashboardEditableRow(
                         text = if (value.isEmpty()) "0" else value,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
-                        color = DetailPrimaryGreen,
+                        color = contentColor,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
                 if (suffix.isNotEmpty()) {
-                    Text(suffix, style = MaterialTheme.typography.bodySmall, color = Color.Black, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+                    Text(suffix, style = MaterialTheme.typography.bodySmall, color = contentColor, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
                 }
 
                 if (onSettingsClick != null) {
                     IconButton(onClick = onSettingsClick, modifier = Modifier.size(32.dp).padding(start = 4.dp)) {
-                        Icon(Icons.Default.Settings, contentDescription = null, tint = DetailPrimaryGreen, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Settings, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -650,7 +675,8 @@ fun DashboardItemRow(
     label: String,
     value: String,
     isBold: Boolean = false,
-    valueColor: Color = DetailPrimaryGreen
+    valueColor: Color = Color.White,
+    backgroundColor: Color = DetailPrimaryGreen
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
@@ -661,8 +687,8 @@ fun DashboardItemRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(44.dp)
-                .background(Color.White, RoundedCornerShape(8.dp))
-                .border(1.dp, DetailPrimaryGreen.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .background(backgroundColor, RoundedCornerShape(8.dp))
+                .border(1.dp, backgroundColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                 .padding(horizontal = 8.dp)
         ) {
             Text(

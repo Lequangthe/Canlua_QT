@@ -425,7 +425,7 @@ fun TicketCard(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(ticket.createdAt)),
+                                text = SimpleDateFormat("dd/MM/yyyy    HH:mm", Locale.getDefault()).format(Date(ticket.createdAt)),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White
                             )
