@@ -22,7 +22,7 @@ object ExportUtils {
         sheets: List<RiceSheet>,
         allCells: List<RiceCell>,
         totalWeight: Double,
-        totalPrice: Double
+        totalPrice: Long
     ) {
         val workbook = XSSFWorkbook()
         val gson = Gson()
@@ -84,7 +84,7 @@ object ExportUtils {
         }
         summarySheet.createRow(rowIdx++).apply {
             createCell(0).setCellValue("Thành tiền:")
-            createCell(1).setCellValue(totalPrice)
+            createCell(1).setCellValue(totalPrice.toDouble())
         }
         summarySheet.createRow(rowIdx++).apply {
             createCell(0).setCellValue("Tiền cọc/ứng:")
@@ -92,7 +92,7 @@ object ExportUtils {
         }
         summarySheet.createRow(rowIdx++).apply {
             createCell(0).setCellValue("Còn lại:")
-            createCell(1).setCellValue(totalPrice - ticket.deposit)
+            createCell(1).setCellValue((totalPrice - ticket.deposit).toDouble())
         }
 
         val exportDir = File(context.cacheDir, "exports").also { it.mkdirs() }
@@ -209,17 +209,17 @@ object ExportUtils {
             val totalTare = if (ticket.tarePerBag > 0) totalBags.toDouble() / ticket.tarePerBag else 0.0
             val totalImpurity = (totalWeight / 1000.0) * ticket.impurityPerTon
             val remainingWeight = totalWeight - totalTare - totalImpurity
-            val totalPrice = (remainingWeight * ticket.unitPrice)
+            val totalPrice = Math.round(remainingWeight * ticket.unitPrice)
             val balance = totalPrice - ticket.deposit
 
             val row = summarySheet.createRow(rowIdx++)
             row.createCell(0).setCellValue(ticket.ticketName)
-            row.createCell(1).setCellValue(remainingWeight)
+            row.createCell(1).setCellValue(totalWeight)
             row.createCell(2).setCellValue(totalPrice.toDouble())
             row.createCell(3).setCellValue(ticket.deposit.toDouble())
             row.createCell(4).setCellValue(balance.toDouble())
 
-            grandTotalWeight += remainingWeight
+            grandTotalWeight += totalWeight
             grandTotalPrice += totalPrice.toDouble()
             grandTotalBalance += balance.toDouble()
         }

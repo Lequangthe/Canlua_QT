@@ -473,7 +473,7 @@ class RiceViewModel(application: Application) : AndroidViewModel(application), T
                 val totalTare = if (ticket.tarePerBag > 0) totalBags.toDouble() / ticket.tarePerBag else 0.0
                 val totalImpurity = (totalWeight / 1000.0) * ticket.impurityPerTon
                 val netWeight = totalWeight - totalTare - totalImpurity
-                val totalPrice = netWeight * ticket.unitPrice
+                val totalPrice = Math.round(netWeight * ticket.unitPrice)
 
                 com.quangthe.canluav3.utils.ExportUtils.exportToExcel(
                     context, ticket, sheets, allCells, totalWeight, totalPrice
@@ -490,7 +490,7 @@ class RiceViewModel(application: Application) : AndroidViewModel(application), T
         sheets: List<RiceSheet>,
         allCells: List<RiceCell>,
         totalWeight: Double,
-        totalPrice: Double
+        totalPrice: Long
     ) {
         com.quangthe.canluav3.utils.ExportUtils.exportToExcel(
             context, ticket, sheets, allCells, totalWeight, totalPrice
@@ -558,7 +558,7 @@ class RiceViewModel(application: Application) : AndroidViewModel(application), T
                         val totalTare = if (ticket.tarePerBag > 0) totalBags.toDouble() / ticket.tarePerBag else 0.0
                         val totalImpurity = (totalWeight / 1000.0) * ticket.impurityPerTon
                         val remainingWeight = totalWeight - totalTare - totalImpurity
-                        val riceValue = (remainingWeight * ticket.unitPrice).toLong()
+                        val riceValue = Math.round(remainingWeight * ticket.unitPrice)
                         val balance = riceValue - ticket.deposit
                         
                         MultiTicketTotals(

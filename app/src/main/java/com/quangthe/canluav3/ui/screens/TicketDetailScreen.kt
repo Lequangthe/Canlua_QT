@@ -104,8 +104,13 @@ fun TicketDetailScreen(
     val tareRate = ticket?.tarePerBag ?: 8
     val totalTare = if (tareRate > 0) numBags.toDouble() / tareRate else 0.0
     val totalImpurity = (totalWeight / 1000.0) * (ticket?.impurityPerTon ?: 0)
-    val remainingWeight = totalWeight - totalTare - totalImpurity
-    val totalPrice = remainingWeight * (ticket?.unitPrice ?: 0)
+    val rawRemainingWeight = totalWeight - totalTare - totalImpurity
+    
+    // Làm tròn khối lượng còn lại theo cấu hình (ví dụ 1 chữ số thập phân) trước khi tính tiền
+    // để kết quả khớp với con số hiển thị trên màn hình và máy tính tay.
+    val factor = Math.pow(10.0, appSettings.decimalPlaces.toDouble())
+    val remainingWeight = Math.round(rawRemainingWeight * factor) / factor
+    val totalPrice = Math.round(remainingWeight * (ticket?.unitPrice ?: 0))
 
     Scaffold(
         containerColor = DetailAppBackground,
@@ -313,6 +318,7 @@ fun TicketDetailScreen(
                                         ticket = ticketData,
                                         allCells = cells,
                                         totalWeight = weightData,
+                                        remainingWeight = remainingWeight,
                                         totalPrice = priceData
                                     )
                                 }
@@ -365,7 +371,7 @@ fun DashboardContent(
     numBags: Int,
     totalTare: Double,
     remainingWeight: Double,
-    totalPrice: Double,
+    totalPrice: Long,
     ticket: RiceTicket,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
@@ -495,11 +501,13 @@ fun DashboardContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("CÒN PHẢI TRẢ", fontWeight = FontWeight.Black, color = Color.Black)
+                        Text("CÒN PHẢI TRẢ", fontWeight = FontWeight.Black, color = Color.Black, modifier = Modifier.weight(1f))
                         Text(
                             "${DecimalFormat("#,###").format(balance)} đ",
                             fontWeight = FontWeight.Black,
-                            color = BalanceRed
+                            color = BalanceRed,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.weight(1.5f)
                         )
                     }
                 }
@@ -514,7 +522,7 @@ fun DashboardContent(
             title = { Text("Cài đặt trừ bì bao") },
             text = {
                 Column {
-                    Text("Nhập số kg/bao:")
+                    Text("Nhập số bao trừ 1kg:")
                     OutlinedTextField(
                         value = tempValue,
                         onValueChange = { tempValue = it.filter { c -> c.isDigit() } },
@@ -686,10 +694,10 @@ fun DashboardItemRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .heightIn(min = 44.dp)
                 .background(backgroundColor, RoundedCornerShape(8.dp))
                 .border(1.dp, backgroundColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 8.dp, vertical = 8.dp)
         ) {
             Text(
                 value,
@@ -797,7 +805,7 @@ fun DetailDynamicTable(
                     var textFieldValue by remember(sheet.id, r, c) {
                         val initialText = if (cellValue == 0.0) "0" else {
                             if (decimalPlaces > 0) {
-                                (cellValue * Math.pow(10.0, decimalPlaces.toDouble())).toLong().toString()
+                                Math.round(cellValue * Math.pow(10.0, decimalPlaces.toDouble())).toString()
                             } else {
                                 cellValue.toLong().toString()
                             }
@@ -808,7 +816,7 @@ fun DetailDynamicTable(
                     LaunchedEffect(cellValue) {
                         val expectedText = if (cellValue == 0.0) "0" else {
                             if (decimalPlaces > 0) {
-                                (cellValue * Math.pow(10.0, decimalPlaces.toDouble())).toLong().toString()
+                                Math.round(cellValue * Math.pow(10.0, decimalPlaces.toDouble())).toString()
                             } else {
                                 cellValue.toLong().toString()
                             }
