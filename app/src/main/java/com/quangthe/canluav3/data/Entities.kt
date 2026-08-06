@@ -13,6 +13,7 @@ data class RiceTicket(
     val impurityPerTon: Int = 0,
     val unitPrice: Int = 0,
     val deposit: Long = 0,      // Tiền cọc, ứng (kết hợp)
+    val phoneNumber: String = "",
     val isDeleted: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
@@ -70,7 +71,9 @@ data class AppSettings(
     val vibrateOnColumnComplete: Boolean = true,
     val autoFocusNext: Boolean = true,
     val ttsSpeechRate: Float = 1.0f,
-    val ttsPitch: Float = 1.0f
+    val ttsPitch: Float = 1.0f,
+    val tableFontSize: Float = 16f,
+    val globalFontScale: Float = 1.0f
 )
 
 

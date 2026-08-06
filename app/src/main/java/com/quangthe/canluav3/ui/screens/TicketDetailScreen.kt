@@ -13,13 +13,24 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.RemoveCircleOutline
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -143,35 +154,12 @@ fun TicketDetailScreen(
                         }
                     },
                     actions = {
-                        var showMenu by remember { mutableStateOf(false) }
-
                         IconButton(onClick = {
                             ticket?.let { t ->
                                 viewModel.exportTicketToExcelFixed(context, t, sheets, allCells, totalWeight, totalPrice)
                             }
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Xuất Excel", tint = DetailPrimaryGreen)
-                        }
-
-                        Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Thêm", tint = DetailPrimaryGreen)
-                            }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Xuất file Excel (.xlsx)") },
-                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
-                                    onClick = {
-                                        showMenu = false
-                                        ticket?.let { t ->
-                                            viewModel.exportTicketToExcelFixed(context, t, sheets, allCells, totalWeight, totalPrice)
-                                        }
-                                    }
-                                )
-                            }
                         }
 
                         Surface(
@@ -295,7 +283,8 @@ fun TicketDetailScreen(
                         initialFocus = viewModel.getLastFocusPosition(currentSheetIndex),
                         isEditMode = isEditMode,
                         isLatestSheet = currentSheetIndex == sheets.size - 1,
-                        scrollable = false
+                        scrollable = false,
+                        tableFontSize = appSettings.tableFontSize
                     )
                 }
             }
@@ -319,7 +308,8 @@ fun TicketDetailScreen(
                                         allCells = cells,
                                         totalWeight = weightData,
                                         remainingWeight = remainingWeight,
-                                        totalPrice = priceData
+                                        totalPrice = priceData,
+                                        fontSize = appSettings.tableFontSize
                                     )
                                 }
                                 
@@ -382,132 +372,228 @@ fun DashboardContent(
     var showTareDialog by remember { mutableStateOf(false) }
     var showImpurityDialog by remember { mutableStateOf(false) }
     var showPriceDialog by remember { mutableStateOf(false) }
+    var showDepositDialog by remember { mutableStateOf(false) }
 
     val depositAndAdvance = ticket.deposit
     val balance = totalPrice - depositAndAdvance
 
-    val actualTare = if (ticket.tarePerBag > 0) numBags.toDouble() / ticket.tarePerBag else 0.0
-    val actualImpurity = (totalWeight / 1000.0) * ticket.impurityPerTon
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Nhóm 1: Thông tin khách hàng
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = DetailPrimaryGreen, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Thông tin khách hàng", fontWeight = FontWeight.Bold, color = DetailPrimaryGreen)
+                }
+                Spacer(Modifier.height(8.dp))
+                
+                // Tên khách hàng (Có thể sửa)
+                var showNameDialog by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { if(isEditMode) showNameDialog = true }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text("Tên khách hàng", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text(ticket.ticketName, fontWeight = FontWeight.Bold, color = Color.Black)
+                    }
+                }
+                
+                // Số điện thoại (Có thể sửa)
+                var showPhoneDialog by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { if(isEditMode) showPhoneDialog = true }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Call, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text("Số điện thoại", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text(if(ticket.phoneNumber.isEmpty()) "Chưa có" else ticket.phoneNumber, fontWeight = FontWeight.Bold, color = Color.Black)
+                    }
+                }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DashboardBlue),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable { onToggleExpand() },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    tint = DetailPrimaryGreen
-                )
+                if (showNameDialog) {
+                    var tempName by remember { mutableStateOf(ticket.ticketName) }
+                    AlertDialog(
+                        onDismissRequest = { showNameDialog = false },
+                        title = { Text("Sửa tên khách hàng") },
+                        text = { OutlinedTextField(value = tempName, onValueChange = { tempName = it }, modifier = Modifier.fillMaxWidth(), singleLine = true) },
+                        confirmButton = { TextButton(onClick = { onTicketUpdate(ticket.copy(ticketName = tempName)); showNameDialog = false }) { Text("Lưu") } },
+                        dismissButton = { TextButton(onClick = { showNameDialog = false }) { Text("Hủy") } }
+                    )
+                }
+                if (showPhoneDialog) {
+                    var tempPhone by remember { mutableStateOf(ticket.phoneNumber) }
+                    AlertDialog(
+                        onDismissRequest = { showPhoneDialog = false },
+                        title = { Text("Sửa số điện thoại") },
+                        text = { OutlinedTextField(value = tempPhone, onValueChange = { tempPhone = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)) },
+                        confirmButton = { TextButton(onClick = { onTicketUpdate(ticket.copy(phoneNumber = tempPhone)); showPhoneDialog = false }) { Text("Lưu") } },
+                        dismissButton = { TextButton(onClick = { showPhoneDialog = false }) { Text("Hủy") } }
+                    )
+                }
             }
+        }
 
-            AnimatedVisibility(visible = isExpanded) {
-                Column(modifier = Modifier.padding(top = 4.dp)) {
-                    DashboardItemRow("Tổng khối lượng (Gross)", String.format(Locale.US, "%.1f", totalWeight) + " kg", isBold = true)
-                    DashboardItemRow("Tổng số bao", "$numBags bao")
+        // Nhóm 2: StatCards (Ô vuông thông số)
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatSquare(
+                label = "Tổng khối lượng",
+                subLabel = "(Chưa trừ bì)",
+                value = String.format(Locale.US, "%.1f", totalWeight),
+                unit = "kg",
+                icon = Icons.Default.Scale,
+                iconColor = DetailPrimaryGreen,
+                valueColor = DetailPrimaryGreen,
+                modifier = Modifier.weight(1f)
+            )
+            StatSquare(
+                label = "Số lần cân",
+                subLabel = "",
+                value = "$numBags",
+                unit = "bao",
+                icon = Icons.Default.Inventory2,
+                iconColor = Color(0xFF8D6E63), // Brownish for bags
+                valueColor = Color(0xFF8D6E63),
+                modifier = Modifier.weight(1f)
+            )
+        }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color.White.copy(alpha = 0.5f))
+        // Nhóm 3: Khấu trừ & Kết quả Net
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                // Trừ bì
+                EditableStatRow(
+                    label = "Trừ bao bì",
+                    subLabel = "${ticket.tarePerBag} bao/kg",
+                    value = String.format(Locale.US, "-%.1f", totalTare),
+                    unit = "kg",
+                    icon = Icons.Default.RemoveCircleOutline,
+                    iconColor = BalanceRed,
+                    isEditMode = isEditMode,
+                    onClick = { showTareDialog = true }
+                )
+                
+                // Trừ tạp chất
+                val imp = (totalWeight / 1000.0) * ticket.impurityPerTon
+                EditableStatRow(
+                    label = "Trừ tạp chất",
+                    subLabel = "${ticket.impurityPerTon} kg/tấn",
+                    value = String.format(Locale.US, "-%.1f", imp),
+                    unit = "kg",
+                    icon = Icons.Default.AutoAwesome,
+                    iconColor = DashboardBlue,
+                    isEditMode = isEditMode,
+                    onClick = { showImpurityDialog = true }
+                )
 
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                        Text("Trừ bao bì", style = MaterialTheme.typography.bodyMedium, color = Color.Black, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp)
-                                .background(DetailPrimaryGreen, RoundedCornerShape(8.dp))
-                                .border(1.dp, DetailPrimaryGreen.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(String.format(Locale.US, "%.1f", totalTare) + " Kg", fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
-                                Text("${ticket.tarePerBag} bao trừ 1Kg", color = Color.White, fontWeight = FontWeight.Bold)
-                                IconButton(onClick = { showTareDialog = true }, modifier = Modifier.size(32.dp).padding(start = 4.dp)) {
-                                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                }
-                            }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.LightGray.copy(alpha = 0.5f))
+
+                // Khối lượng còn lại (Net)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("Khối lượng còn lại", fontWeight = FontWeight.Bold, color = DetailPrimaryGreen)
+                        Surface(color = DetailPrimaryGreen.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+                            Text("Đã trừ bì", fontSize = 10.sp, color = DetailPrimaryGreen, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
                         }
                     }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color.White.copy(alpha = 0.5f))
-
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                        Text("Trừ tạp chất/Khẩu hao", style = MaterialTheme.typography.bodyMedium, color = Color.Black, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp)
-                                .background(DetailPrimaryGreen, RoundedCornerShape(8.dp))
-                                .border(1.dp, DetailPrimaryGreen.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val actualImpurity = (totalWeight / 1000.0) * ticket.impurityPerTon
-                                Text(String.format(Locale.US, "%.1f", actualImpurity) + " Kg", fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
-                                Text("Trừ ${ticket.impurityPerTon} Kg mỗi tấn", color = Color.White, fontWeight = FontWeight.Bold)
-                                IconButton(onClick = { showImpurityDialog = true }, modifier = Modifier.size(32.dp).padding(start = 4.dp)) {
-                                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        }
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(String.format(Locale.US, "%.1f", remainingWeight), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = DetailPrimaryGreen)
+                        Spacer(Modifier.width(4.dp))
+                        Text("kg", color = DetailPrimaryGreen, modifier = Modifier.padding(bottom = 4.dp), fontWeight = FontWeight.Bold)
                     }
+                }
+            }
+        }
 
-                    DashboardItemRow("Khối lượng còn lại (Net)", String.format(Locale.US, "%.1f", remainingWeight) + " kg", isBold = true)
+        // Nhóm 4: Thanh toán
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Payments, contentDescription = null, tint = DetailPrimaryGreen, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Thành tiền", fontWeight = FontWeight.Bold, color = DetailPrimaryGreen)
+                }
+                Spacer(Modifier.height(12.dp))
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color.White.copy(alpha = 0.5f))
+                // Đơn giá
+                EditableStatRow(
+                    label = "Đơn giá",
+                    subLabel = "",
+                    value = DecimalFormat("#,###").format(ticket.unitPrice),
+                    unit = "đ/kg",
+                    icon = Icons.Default.Sell,
+                    iconColor = Color(0xFFE64A19), // Orange-Red
+                    isEditMode = isEditMode,
+                    onClick = { showPriceDialog = true }
+                )
 
-                    DashboardEditableRow(
-                        label = "Đơn giá (VNĐ/kg)",
-                        value = if (ticket.unitPrice == 0) "" else ticket.unitPrice.toString(),
-                        onValueChange = { onTicketUpdate(ticket.copy(unitPrice = it.toIntOrNull() ?: 0)) },
-                        isEditMode = isEditMode,
-                        focusRequester = unitPriceFocusRequester,
-                        onSettingsClick = { showPriceDialog = true }
-                    )
+                // Thành tiền
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Thành tiền", fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(DecimalFormat("#,###").format(totalPrice), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = DetailPrimaryGreen)
+                        Spacer(Modifier.width(4.dp))
+                        Text("đ", color = DetailPrimaryGreen, fontWeight = FontWeight.Bold)
+                    }
+                }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = Color.White.copy(alpha = 0.5f))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.LightGray.copy(alpha = 0.5f))
 
-                    val priceCalculation = "${String.format(Locale.US, "%.1f", remainingWeight)} kg x ${DecimalFormat("#,###").format(ticket.unitPrice)} ="
-                    DashboardItemRow("Thành tiền", "$priceCalculation ${DecimalFormat("#,###").format(totalPrice)} đ", isBold = true)
+                // Cọc/Ứng
+                EditableStatRow(
+                    label = "Tiền cọc, ứng",
+                    subLabel = "",
+                    value = DecimalFormat("#,###").format(ticket.deposit),
+                    unit = "đ",
+                    icon = Icons.Default.AccountBalanceWallet,
+                    iconColor = Color(0xFFFBC02D), // Gold
+                    isEditMode = isEditMode,
+                    onClick = { showDepositDialog = true }
+                )
 
-                    DashboardEditableRow(
-                        label = "TIỀN CỌC, TIỀN ỨNG",
-                        value = if (ticket.deposit == 0L) "" else ticket.deposit.toString(),
-                        onValueChange = { onTicketUpdate(ticket.copy(deposit = it.toLongOrNull() ?: 0L)) },
-                        isEditMode = isEditMode
-                    )
+                Spacer(modifier = Modifier.height(8.dp))
 
-                    Spacer(modifier = Modifier.height(2.dp))
-
+                // Dòng CÒN LẠI màu xanh đậm
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    color = DetailPrimaryGreen
+                ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            .padding(8.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("CÒN PHẢI TRẢ", fontWeight = FontWeight.Black, color = Color.Black, modifier = Modifier.weight(1f))
+                        Text("CÒN PHẢI TRẢ", fontWeight = FontWeight.Black, color = Color.White)
                         Text(
                             "${DecimalFormat("#,###").format(balance)} đ",
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Black,
-                            color = BalanceRed,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.weight(1.5f)
+                            color = Color.White
                         )
                     }
                 }
@@ -601,7 +687,117 @@ fun DashboardContent(
             }
         )
     }
+
+    if (showDepositDialog && ticket != null) {
+        var tempValue by remember { mutableStateOf(ticket.deposit.toString()) }
+        AlertDialog(
+            onDismissRequest = { showDepositDialog = false },
+            title = { Text("Cài đặt tiền cọc, ứng") },
+            text = {
+                Column {
+                    Text("Nhập số tiền cọc, ứng (đ):")
+                    OutlinedTextField(
+                        value = tempValue,
+                        onValueChange = { tempValue = it.filter { c -> c.isDigit() } },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTicketUpdate(ticket.copy(deposit = tempValue.toLongOrNull() ?: 0L))
+                    showDepositDialog = false
+                }) { Text("Lưu") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDepositDialog = false }) { Text("Hủy") }
+            }
+        )
+    }
 }
+
+@Composable
+fun StatSquare(
+    label: String,
+    subLabel: String,
+    value: String,
+    unit: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color,
+    valueColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.height(140.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.height(8.dp))
+            Text(label, style = MaterialTheme.typography.bodySmall, color = Color.Gray, fontWeight = FontWeight.Bold)
+            if (subLabel.isNotEmpty()) {
+                Text(subLabel, fontSize = 9.sp, color = Color.Gray)
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, color = valueColor)
+                Spacer(Modifier.width(4.dp))
+                Text(unit, fontSize = 12.sp, color = valueColor, modifier = Modifier.padding(bottom = 4.dp), fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun EditableStatRow(
+    label: String,
+    subLabel: String,
+    value: String,
+    unit: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color,
+    isEditMode: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { if (isEditMode) onClick() }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(32.dp).background(iconColor.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = Color.Black, fontWeight = FontWeight.Bold)
+            if (subLabel.isNotEmpty()) {
+                Text(subLabel, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (isEditMode) {
+                Icon(Icons.Default.Edit, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(14.dp).padding(end = 4.dp))
+            }
+            Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = iconColor)
+            Spacer(Modifier.width(4.dp))
+            Text(unit, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        }
+    }
+}
+
+
 
 @Composable
 fun DashboardEditableRow(
@@ -744,7 +940,8 @@ fun DetailDynamicTable(
     initialFocus: Pair<Int, Int> = Pair(0, 0),
     isEditMode: Boolean = false,
     isLatestSheet: Boolean = true,
-    scrollable: Boolean = true
+    scrollable: Boolean = true,
+    tableFontSize: Float = 16f
 ) {
     val focusManager = LocalFocusManager.current
     val numRows = sheet.numRows
@@ -792,7 +989,8 @@ fun DetailDynamicTable(
                     text = colTitles.getOrElse(c) { "C${c + 1}" }.uppercase(),
                     modifier = Modifier.weight(1f),
                     isHeader = true,
-                    isColumnHeader = true
+                    isColumnHeader = true,
+                    fontSize = tableFontSize
                 )
             }
         }
@@ -904,7 +1102,8 @@ fun DetailDynamicTable(
                                         bringIntoViewRequester.bringIntoView()
                                     }
                                 }
-                            }
+                            },
+                            fontSize = tableFontSize
                         )
                     }
                 }
@@ -919,7 +1118,8 @@ fun DetailDynamicTable(
                     modifier = Modifier.weight(1f),
                     isHeader = true,
                     backgroundColor = SummaryGold,
-                    textColor = Color.Black
+                    textColor = Color.Black,
+                    fontSize = tableFontSize
                 )
             }
         }
@@ -934,8 +1134,18 @@ fun DetailDynamicTable(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("TỔNG BẢNG", fontWeight = FontWeight.ExtraBold, color = Color.Black)
-            Text(df.format(sheetSum), fontWeight = FontWeight.ExtraBold, color = Color.Black)
+            Text(
+                "TỔNG BẢNG", 
+                fontWeight = FontWeight.ExtraBold, 
+                color = Color.Black,
+                fontSize = tableFontSize.sp
+            )
+            Text(
+                df.format(sheetSum), 
+                fontWeight = FontWeight.ExtraBold, 
+                color = Color.Black,
+                fontSize = tableFontSize.sp
+            )
         }
     }
 }
@@ -947,7 +1157,8 @@ fun DetailTableCell(
     isHeader: Boolean = false,
     isColumnHeader: Boolean = false,
     backgroundColor: Color? = null,
-    textColor: Color? = null
+    textColor: Color? = null,
+    fontSize: Float = 16f
 ) {
     Box(
         modifier = modifier
@@ -959,8 +1170,11 @@ fun DetailTableCell(
         Text(
             text = text,
             textAlign = TextAlign.Center,
-            style = if (isHeader) MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Black) else MaterialTheme.typography.bodyMedium,
-            color = textColor ?: if (isColumnHeader) Color.White else DetailTextColor
+            style = (if (isHeader) MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Black) else MaterialTheme.typography.bodyMedium)
+                .copy(fontSize = fontSize.sp, fontWeight = FontWeight.Bold),
+            color = textColor ?: if (isColumnHeader) Color.White else DetailTextColor,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }
@@ -974,7 +1188,8 @@ private fun NumberInputField(
     keyboardOptions: KeyboardOptions,
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit,
     textAlign: TextAlign,
-    onFocusChange: (Boolean) -> Unit
+    onFocusChange: (Boolean) -> Unit,
+    fontSize: Float = 16f
 ) {
     BasicTextField(
         value = value,
@@ -986,7 +1201,8 @@ private fun NumberInputField(
         textStyle = TextStyle(
             textAlign = textAlign,
             fontWeight = FontWeight.Bold,
-            color = DetailTextColor
+            color = DetailTextColor,
+            fontSize = fontSize.sp
         ),
         cursorBrush = SolidColor(DetailPrimaryGreen)
     )

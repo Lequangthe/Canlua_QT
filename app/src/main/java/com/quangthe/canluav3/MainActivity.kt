@@ -23,9 +23,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            CANLUAV3Theme {
+            val viewModel: RiceViewModel = viewModel()
+            val appSettings by viewModel.appSettings.collectAsState()
+            
+            CANLUAV3Theme(fontScale = appSettings.globalFontScale) {
                 val navController = rememberNavController()
-                val viewModel: RiceViewModel = viewModel()
 
                 NavHost(navController = navController, startDestination = "main") {
                     composable("main") {
