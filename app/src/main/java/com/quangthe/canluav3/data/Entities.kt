@@ -72,8 +72,9 @@ data class AppSettings(
     val autoFocusNext: Boolean = true,
     val ttsSpeechRate: Float = 1.0f,
     val ttsPitch: Float = 1.0f,
-    val tableFontSize: Float = 16f,
-    val globalFontScale: Float = 1.0f
+    val tableFontSize: Float = 24f,
+    val globalFontScale: Float = 1.0f,
+    val fontFamilyName: String = "Default"
 )
 
 

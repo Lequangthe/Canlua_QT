@@ -299,6 +299,55 @@ fun OptionsTab(viewModel: RiceViewModel, settings: AppSettings) {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Kiểu chữ (Font Family)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = SettingsPrimaryGreen)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val fonts = listOf(
+                        "Default" to "Mặc định hệ thống",
+                        "Roboto" to "Roboto (Hiện đại)",
+                        "Montserrat" to "Montserrat (Tròn trịa)",
+                        "Oswald" to "Oswald (Số to rõ)",
+                        "Smooch Sans" to "Smooch Sans (Thanh mảnh)",
+                        "Alfa Slab One" to "Alfa Slab (Dày đặc)",
+                        "Lobster" to "Lobster (Nghệ thuật)",
+                        "Quicksand" to "Quicksand (Dễ thương)",
+                        "Roboto Mono" to "Roboto Mono (Dễ đọc số)"
+                    )
+
+                    fonts.forEach { (fontId, displayName) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            RadioButton(
+                                selected = settings.fontFamilyName == fontId,
+                                onClick = { viewModel.updateAppSettings(settings.copy(fontFamilyName = fontId)) },
+                                colors = RadioButtonDefaults.colors(selectedColor = SettingsPrimaryGreen)
+                            )
+                            Column {
+                                Text(displayName, style = MaterialTheme.typography.bodyLarge)
+                                // Preview text với font đó
+                                val tempTypography = getTypography(1.0f, fontId)
+                                Text(
+                                    "Mẫu chữ: 123.45 kg",
+                                    style = tempTypography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
             
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.White),

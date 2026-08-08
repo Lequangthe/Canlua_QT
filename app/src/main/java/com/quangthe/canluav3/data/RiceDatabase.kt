@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         RiceCell::class,
         AppSettings::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class RiceDatabase : RoomDatabase() {

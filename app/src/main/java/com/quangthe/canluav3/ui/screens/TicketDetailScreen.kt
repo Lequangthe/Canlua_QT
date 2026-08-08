@@ -198,6 +198,7 @@ fun TicketDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp)
         ) {
@@ -323,7 +324,7 @@ fun TicketDetailScreen(
                     }
                 }
             )
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(140.dp))
 
         }
 
@@ -445,7 +446,7 @@ fun DashboardContent(
         }
 
         // Nhóm 2: StatCards (Ô vuông thông số)
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             StatSquare(
                 label = "Tổng khối lượng",
                 subLabel = "(Chưa trừ bì)",
@@ -504,19 +505,22 @@ fun DashboardContent(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.LightGray.copy(alpha = 0.5f))
 
                 // Khối lượng còn lại (Net)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Khối lượng còn lại", fontWeight = FontWeight.Bold, color = DetailPrimaryGreen)
-                        Surface(color = DetailPrimaryGreen.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
-                            Text("Đã trừ bì", fontSize = 10.sp, color = DetailPrimaryGreen, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("Khối lượng còn lại", fontWeight = FontWeight.Bold, color = DetailPrimaryGreen)
+                            Surface(color = DetailPrimaryGreen.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+                                Text("Đã trừ bì", fontSize = 10.sp, color = DetailPrimaryGreen, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(String.format(Locale.US, "%.1f", remainingWeight), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = DetailPrimaryGreen)
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Text(String.format(Locale.US, "%.1f", remainingWeight), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black, color = DetailPrimaryGreen)
                         Spacer(Modifier.width(4.dp))
                         Text("kg", color = DetailPrimaryGreen, modifier = Modifier.padding(bottom = 4.dp), fontWeight = FontWeight.Bold)
                     }
@@ -583,17 +587,19 @@ fun DashboardContent(
                     shape = RoundedCornerShape(8.dp),
                     color = DetailPrimaryGreen
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 12.dp)
                     ) {
                         Text("CÒN PHẢI TRẢ", fontWeight = FontWeight.Black, color = Color.White)
+                        Spacer(Modifier.height(4.dp))
                         Text(
                             "${DecimalFormat("#,###").format(balance)} đ",
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Black,
-                            color = Color.White
+                            color = Color.White,
+                            modifier = Modifier.align(Alignment.End)
                         )
                     }
                 }
@@ -729,7 +735,7 @@ fun StatSquare(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.height(140.dp),
+        modifier = modifier.height(176.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
@@ -746,10 +752,9 @@ fun StatSquare(
                 Text(subLabel, fontSize = 9.sp, color = Color.Gray)
             }
             Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, color = valueColor)
-                Spacer(Modifier.width(4.dp))
-                Text(unit, fontSize = 12.sp, color = valueColor, modifier = Modifier.padding(bottom = 4.dp), fontWeight = FontWeight.Bold)
+                Text(unit, fontSize = 12.sp, color = valueColor, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -941,7 +946,7 @@ fun DetailDynamicTable(
     isEditMode: Boolean = false,
     isLatestSheet: Boolean = true,
     scrollable: Boolean = true,
-    tableFontSize: Float = 16f
+    tableFontSize: Float = 24f
 ) {
     val focusManager = LocalFocusManager.current
     val numRows = sheet.numRows
@@ -1113,39 +1118,59 @@ fun DetailDynamicTable(
         Row(modifier = Modifier.fillMaxWidth().background(SummaryGold).border(0.5.dp, DetailTableBorder)) {
             for (c in 0 until numCols) {
                 val colSum = cells.filter { it.colIndex == c }.sumOf { it.value }
-                DetailTableCell(
-                    text = df.format(colSum),
-                    modifier = Modifier.weight(1f),
-                    isHeader = true,
-                    backgroundColor = SummaryGold,
-                    textColor = Color.Black,
-                    fontSize = tableFontSize
-                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp)
+                        .background(SummaryGold)
+                        .border(1.dp, DetailBorderColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = df.format(colSum),
+                        fontWeight = FontWeight.Black,
+                        color = Color.Black,
+                        fontSize = tableFontSize.sp,
+                        maxLines = 1
+                    )
+                }
             }
         }
 
         val sheetSum = cells.sumOf { it.value }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(SummaryGold)
-                .border(0.5.dp, DetailTableBorder)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "TỔNG BẢNG", 
-                fontWeight = FontWeight.ExtraBold, 
-                color = Color.Black,
-                fontSize = tableFontSize.sp
-            )
-            Text(
-                df.format(sheetSum), 
-                fontWeight = FontWeight.ExtraBold, 
-                color = Color.Black,
-                fontSize = tableFontSize.sp
-            )
+        Row(modifier = Modifier.fillMaxWidth().background(SummaryGold)) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp)
+                    .background(SummaryGold)
+                    .border(1.dp, DetailBorderColor)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    "TỔNG BẢNG",
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.Black,
+                    fontSize = tableFontSize.sp
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp)
+                    .background(SummaryGoldLight)
+                    .border(1.dp, DetailBorderColor)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    df.format(sheetSum),
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.Black,
+                    fontSize = tableFontSize.sp
+                )
+            }
         }
     }
 }
@@ -1198,7 +1223,7 @@ private fun NumberInputField(
         readOnly = readOnly,
         keyboardOptions = keyboardOptions,
         decorationBox = decorationBox,
-        textStyle = TextStyle(
+        textStyle = LocalTextStyle.current.copy(
             textAlign = textAlign,
             fontWeight = FontWeight.Bold,
             color = DetailTextColor,
